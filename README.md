@@ -8,15 +8,17 @@ By default **nobody** can noclip — including panel owners — so it is easy to
 
 ## Panel install (Plugin Directory)
 
-Release zip uses the `game/csgo` layout (`addons/...`).
+Release zip root is the plugin folder (`YGuardAntiNoclip.dll`) — same layout as YGuardVIP.
 
 1. **RELEASE URL**
    ```text
-   https://github.com/kianPk/YGuardAntiNoclip/releases/download/v1.0.0/YGuardAntiNoclip-1.0.0.zip
+   https://github.com/kianPk/YGuardAntiNoclip/releases/download/v1.0.1/YGuardAntiNoclip-1.0.1.zip
    ```
 2. **FRAMEWORK:** CounterStrikeSharp
-3. **ARCHIVE LAYOUT:** Archive root is game/csgo
-4. Add to catalog → Install on nodes → enable load for Public / Custom
+3. **ARCHIVE LAYOUT:** Archive root is the plugin folder
+4. **INSTALL PATH:** `addons/counterstrikesharp/plugins/YGuardAntiNoclip`
+5. Add to catalog → Install on nodes
+6. Turn **Ranked Matches** ON under “Load without a game mode” (covers Public dedicated)
 
 ## Config
 
