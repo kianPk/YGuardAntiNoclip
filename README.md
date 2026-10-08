@@ -12,15 +12,24 @@ Release zip root is the plugin folder (`YGuardAntiNoclip.dll`) — same layout a
 
 1. **RELEASE URL**
    ```text
-   https://github.com/kianPk/YGuardAntiNoclip/releases/download/v1.0.2/YGuardAntiNoclip-1.0.2.zip
+   https://github.com/kianPk/YGuardAntiNoclip/releases/download/v1.0.3/YGuardAntiNoclip-1.0.3.zip
    ```
 2. **FRAMEWORK:** CounterStrikeSharp
 3. **ARCHIVE LAYOUT:** Archive root is the plugin folder
 4. **INSTALL PATH:** `addons/counterstrikesharp/plugins/YGuardAntiNoclip`
-5. Add to catalog → Install on nodes
-6. Turn **Ranked Matches** ON under “Load without a game mode” (covers Public dedicated)
+5. Add to catalog → Install on nodes until rollout is green
+6. **Required:** turn **Ranked Matches** ON (without this the DLL is installed but never linked into Public servers)
+7. Restart the Public dedicated server
 
 Zip root is flat (`YGuardAntiNoclip.dll`), with forward-slash paths so Linux `unzip` works.
+
+### Prove it loaded (RCON)
+
+```text
+css_antinoclip_status
+```
+
+You should see `active=true`. On map start chat also shows `[AntiNoclip] active`.
 
 ## Config
 
