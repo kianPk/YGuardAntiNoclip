@@ -9,8 +9,8 @@ public class YGuardAntiNoclipConfig : BasePluginConfig
     public string ChatPrefix { get; set; } = "AntiNoclip";
 
     /// <summary>
-    /// When true, players holding AdminFlag (or @css/root) may keep noclip.
-    /// Default false — nobody flies on public servers, including panel owners.
+    /// When true, players holding AdminFlag (or @css/root) may use cheats/noclip.
+    /// Default false — nobody on public, including panel owners.
     /// </summary>
     [JsonPropertyName("AllowAdminNoclip")]
     public bool AllowAdminNoclip { get; set; }

@@ -11,21 +11,54 @@ using Microsoft.Extensions.Logging;
 namespace YGuardAntiNoclip;
 
 /// <summary>
-/// Blocks engine + plugin noclip on every server except Practice.
-/// Nobody may fly by default (including owners).
+/// Locks cheats on Public/Custom/Ranked: sv_cheats 0, block engine + CSS cheat
+/// commands, strip noclip. Practice is left alone.
 /// </summary>
 public class YGuardAntiNoclipPlugin : BasePlugin, IPluginConfig<YGuardAntiNoclipConfig>
 {
     public override string ModuleName => "YGuard Anti Noclip";
-    public override string ModuleVersion => "1.0.3";
+    public override string ModuleVersion => "1.0.4";
     public override string ModuleAuthor => "YGuard";
     public override string ModuleDescription =>
-        "Blocks bind/noclip for everyone on non-Practice servers";
+        "Blocks cheats/noclip/give for everyone on non-Practice servers";
 
     public YGuardAntiNoclipConfig Config { get; set; } = new();
 
     private bool _active;
     private readonly HashSet<ulong> _warned = [];
+
+    // Engine + common CSS/SimpleAdmin cheat surfaces regular players abuse.
+    private static readonly string[] BlockedCommands =
+    [
+        "noclip",
+        "god",
+        "buddha",
+        "give",
+        "impulse",
+        "ent_create",
+        "ent_fire",
+        "ent_teleport",
+        "setpos",
+        "setang",
+        "thirdperson",
+        "firstperson",
+        "css_noclip",
+        "css_god",
+        "css_give",
+        "css_weapon",
+        "css_hp",
+        "css_speed",
+        "css_gravity",
+        "css_money",
+        "css_respawn",
+        "css_freeze",
+        "css_unfreeze",
+        "css_strip",
+        "css_resize",
+        "sm_noclip",
+        "sm_god",
+        "sm_give",
+    ];
 
     public void OnConfigParsed(YGuardAntiNoclipConfig config)
     {
@@ -38,14 +71,14 @@ public class YGuardAntiNoclipPlugin : BasePlugin, IPluginConfig<YGuardAntiNoclip
         _active = !(Config.SkipPractice
                     && serverType.Equals("Practice", StringComparison.OrdinalIgnoreCase));
 
-        // Always register a status command so RCON can prove the DLL loaded.
         AddCommand(
             "css_antinoclip_status",
             "Print AntiNoclip status",
             (player, info) =>
             {
+                var cheats = ConVar.Find("sv_cheats")?.GetPrimitiveValue<bool>() ?? false;
                 var msg =
-                    $"[AntiNoclip] v{ModuleVersion} active={_active} type={serverType} allowAdmin={Config.AllowAdminNoclip}";
+                    $"[AntiNoclip] v{ModuleVersion} active={_active} type={serverType} sv_cheats={(cheats ? 1 : 0)}";
                 Logger.LogInformation("{Msg}", msg);
                 info.ReplyToCommand(msg);
                 player?.PrintToChat($" {ChatColors.Green}{msg}");
@@ -59,27 +92,26 @@ public class YGuardAntiNoclipPlugin : BasePlugin, IPluginConfig<YGuardAntiNoclip
             return;
         }
 
-        AddCommandListener("noclip", OnNoclipCommand, HookMode.Pre);
-        AddCommandListener("css_noclip", OnNoclipCommand, HookMode.Pre);
-        AddCommandListener("sm_noclip", OnNoclipCommand, HookMode.Pre);
+        foreach (var cmd in BlockedCommands)
+        {
+            AddCommandListener(cmd, OnBlockedCommand, HookMode.Pre);
+        }
 
         RegisterListener<Listeners.OnTick>(OnTick);
         RegisterListener<Listeners.OnMapStart>(_ =>
         {
             _warned.Clear();
             LockCheatsOff();
-            // Visible proof the plugin is on this map — remove later if noisy.
             Server.PrintToChatAll(
-                $" {ChatColors.Green}[AntiNoclip]{ChatColors.Default} active — noclip blocked");
+                $" {ChatColors.Green}[AntiNoclip]{ChatColors.Default} cheats locked");
         });
 
-        AddTimer(5f, LockCheatsOff, TimerFlags.REPEAT);
+        AddTimer(2f, LockCheatsOff, TimerFlags.REPEAT);
         LockCheatsOff();
 
         Logger.LogInformation(
-            "YGuardAntiNoclip ACTIVE (SERVER_TYPE={Type}, allowAdmin={Allow})",
-            string.IsNullOrEmpty(serverType) ? "(unset)" : serverType,
-            Config.AllowAdminNoclip);
+            "YGuardAntiNoclip ACTIVE (SERVER_TYPE={Type})",
+            string.IsNullOrEmpty(serverType) ? "(unset)" : serverType);
     }
 
     private void LockCheatsOff()
@@ -88,24 +120,28 @@ public class YGuardAntiNoclipPlugin : BasePlugin, IPluginConfig<YGuardAntiNoclip
         Server.ExecuteCommand("sv_cheats 0");
         try
         {
-            ConVar.Find("sv_cheats")?.SetValue(false);
+            var cvar = ConVar.Find("sv_cheats");
+            if (cvar != null && cvar.GetPrimitiveValue<bool>())
+            {
+                cvar.SetValue(false);
+            }
         }
         catch
         {
-            // older CSS builds may not expose SetValue the same way
+            // ignore CSS ConVar quirks
         }
     }
 
-    private HookResult OnNoclipCommand(CCSPlayerController? player, CommandInfo info)
+    private HookResult OnBlockedCommand(CCSPlayerController? player, CommandInfo info)
     {
         if (!_active) return HookResult.Continue;
-        // Block even for console/RCON targeting players — nobody gets noclip.
         if (player == null || !player.IsValid || player.IsBot)
         {
-            return HookResult.Handled;
+            // Still block anonymous client cheat spam; allow real server console.
+            return HookResult.Continue;
         }
 
-        if (MayNoclip(player)) return HookResult.Continue;
+        if (MayCheat(player)) return HookResult.Continue;
 
         WarnOnce(player);
         return HookResult.Handled;
@@ -115,23 +151,38 @@ public class YGuardAntiNoclipPlugin : BasePlugin, IPluginConfig<YGuardAntiNoclip
     {
         if (!_active) return;
 
+        // Keep cheats pinned off every frame — other plugins/admins flip it back.
+        try
+        {
+            var cvar = ConVar.Find("sv_cheats");
+            if (cvar != null && cvar.GetPrimitiveValue<bool>())
+            {
+                cvar.SetValue(false);
+                Server.ExecuteCommand("sv_cheats 0");
+            }
+        }
+        catch
+        {
+            // fall through to movetype strip
+        }
+
         foreach (var player in Utilities.GetPlayers())
         {
             if (player is not { IsValid: true, IsBot: false, IsHLTV: false }) continue;
-            if (MayNoclip(player)) continue;
+            if (MayCheat(player)) continue;
 
             var pawn = player.PlayerPawn.Value;
             if (pawn == null || !pawn.IsValid) continue;
 
             var moveType = pawn.MoveType;
-            byte actual = 0;
+            byte actual = (byte)moveType;
             try
             {
                 actual = Schema.GetSchemaValue<byte>(pawn.Handle, "CBaseEntity", "m_nActualMoveType");
             }
             catch
             {
-                actual = (byte)moveType;
+                // ignore
             }
 
             if (moveType != MoveType_t.MOVETYPE_NOCLIP
@@ -145,7 +196,7 @@ public class YGuardAntiNoclipPlugin : BasePlugin, IPluginConfig<YGuardAntiNoclip
         }
     }
 
-    private bool MayNoclip(CCSPlayerController player)
+    private bool MayCheat(CCSPlayerController player)
     {
         if (!Config.AllowAdminNoclip) return false;
         return AdminManager.PlayerHasPermissions(player, Config.AdminFlag)
@@ -156,7 +207,7 @@ public class YGuardAntiNoclipPlugin : BasePlugin, IPluginConfig<YGuardAntiNoclip
     {
         if (!_warned.Add(player.SteamID)) return;
         player.PrintToChat(
-            $" {ChatColors.Red}[{Config.ChatPrefix}]{ChatColors.Default} Noclip is disabled on this server.");
+            $" {ChatColors.Red}[{Config.ChatPrefix}]{ChatColors.Default} Cheats are disabled on this server.");
     }
 
     private static void SetWalk(CCSPlayerPawn pawn)
