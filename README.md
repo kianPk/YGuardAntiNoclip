@@ -12,13 +12,15 @@ Release zip root is the plugin folder (`YGuardAntiNoclip.dll`) — same layout a
 
 1. **RELEASE URL**
    ```text
-   https://github.com/kianPk/YGuardAntiNoclip/releases/download/v1.0.1/YGuardAntiNoclip-1.0.1.zip
+   https://github.com/kianPk/YGuardAntiNoclip/releases/download/v1.0.2/YGuardAntiNoclip-1.0.2.zip
    ```
 2. **FRAMEWORK:** CounterStrikeSharp
 3. **ARCHIVE LAYOUT:** Archive root is the plugin folder
 4. **INSTALL PATH:** `addons/counterstrikesharp/plugins/YGuardAntiNoclip`
 5. Add to catalog → Install on nodes
 6. Turn **Ranked Matches** ON under “Load without a game mode” (covers Public dedicated)
+
+Zip root is flat (`YGuardAntiNoclip.dll`), with forward-slash paths so Linux `unzip` works.
 
 ## Config
 
