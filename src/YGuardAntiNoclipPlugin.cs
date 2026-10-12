@@ -17,7 +17,7 @@ namespace YGuardAntiNoclip;
 public class YGuardAntiNoclipPlugin : BasePlugin, IPluginConfig<YGuardAntiNoclipConfig>
 {
     public override string ModuleName => "YGuard Anti Noclip";
-    public override string ModuleVersion => "1.0.4";
+    public override string ModuleVersion => "1.0.5";
     public override string ModuleAuthor => "YGuard";
     public override string ModuleDescription =>
         "Blocks cheats/noclip/give for everyone on non-Practice servers";
@@ -78,7 +78,7 @@ public class YGuardAntiNoclipPlugin : BasePlugin, IPluginConfig<YGuardAntiNoclip
             {
                 var cheats = ConVar.Find("sv_cheats")?.GetPrimitiveValue<bool>() ?? false;
                 var msg =
-                    $"[AntiNoclip] v{ModuleVersion} active={_active} type={serverType} sv_cheats={(cheats ? 1 : 0)}";
+                    $"[AntiNoclip] v{ModuleVersion} active={_active} type={serverType} sv_cheats={(cheats ? 1 : 0)} pluginNoclip={Config.AllowPluginNoclip}";
                 Logger.LogInformation("{Msg}", msg);
                 info.ReplyToCommand(msg);
                 player?.PrintToChat($" {ChatColors.Green}{msg}");
@@ -94,6 +94,7 @@ public class YGuardAntiNoclipPlugin : BasePlugin, IPluginConfig<YGuardAntiNoclip
 
         foreach (var cmd in BlockedCommands)
         {
+            if (Config.AllowPluginNoclip && cmd == "css_noclip") continue;
             AddCommandListener(cmd, OnBlockedCommand, HookMode.Pre);
         }
 
@@ -165,6 +166,9 @@ public class YGuardAntiNoclipPlugin : BasePlugin, IPluginConfig<YGuardAntiNoclip
         {
             // fall through to movetype strip
         }
+
+        // With sv_cheats pinned off, the engine cannot grant noclip; only a plugin can.
+        if (Config.AllowPluginNoclip) return;
 
         foreach (var player in Utilities.GetPlayers())
         {

@@ -21,4 +21,12 @@ public class YGuardAntiNoclipConfig : BasePluginConfig
     /// <summary>Practice servers keep noclip for utility training.</summary>
     [JsonPropertyName("SkipPractice")]
     public bool SkipPractice { get; set; } = true;
+
+    /// <summary>
+    /// Leaves noclip that another plugin grants (ServersBhop's !noclip practice)
+    /// and its css_noclip alone. sv_cheats stays locked and every other cheat
+    /// command stays blocked.
+    /// </summary>
+    [JsonPropertyName("AllowPluginNoclip")]
+    public bool AllowPluginNoclip { get; set; }
 }
